@@ -2,64 +2,100 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Утсан дээр дэлгэц томрохоос сэргийлсэн тохиргоо -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Open Speak Mongolia</title>
   <link rel="stylesheet" href="style.css">
-  
-  <!-- Firebase SDK (v9 compat хувилбар нь хялбар) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
   <header>
     <h1>🇲🇳 Open Speak Mongolia</h1>
-    <p class="subtitle">Community-driven phrasebook</p>
-    
-    <!-- Шинэ үг, дуу нэмэх товчлуур -->
-    <button id="toggleFormBtn" class="primary-btn" style="margin-top: 12px;">+ Add New Phrase</button>
+    <p>Community-driven phrasebook</p>
   </header>
 
-  <!-- Үг ба Дуу бичиж оруулах модал форм -->
-  <section id="addPhraseModal" class="modal hidden">
+  <!-- 1. Таб шилжүүлэх хэсэг -->
+  <div class="tabs-container">
+    <button id="tabPhrasesBtn" class="tab-btn active">📚 Phrases</button>
+    <button id="tabRequestsBtn" class="tab-btn">❓ Requests (<span id="requestCount">0</span>)</button>
+  </div>
+
+  <!-- 2. Үйлдлийн товчлуурууд -->
+  <div class="action-buttons">
+    <button id="toggleFormBtn" class="btn-primary">+ Add New Phrase</button>
+    <button id="toggleRequestBtn" class="btn-secondary">+ Ask for a Phrase</button>
+  </div>
+
+  <main>
+    <!-- 3. Үндсэн үгсийн таб -->
+    <div id="phrasesSection">
+      <input type="text" id="searchInput" placeholder="Search phrases...">
+      <div id="phraseList" class="phrase-list"></div>
+    </div>
+
+    <!-- 4. Жуулчдын хүсэлтийн таб -->
+    <div id="requestsSection" class="hidden">
+      <div id="requestList" class="phrase-list"></div>
+    </div>
+  </main>
+
+  <!-- Үг нэмэх цонх (Modal) -->
+  <div id="addPhraseModal" class="modal hidden">
     <div class="modal-content">
       <h3>Record & Add Phrase</h3>
       
-      <input type="text" id="inputEn" placeholder="English (e.g. Where is the bus stop?)" required>
-      <input type="text" id="inputMn" placeholder="Монгол (жишээ: Автобусны буудал хаана вэ?)" required>
+      <input type="text" id="inputEn" placeholder="English (e.g. Where is the bus stop?)">
+      <input type="text" id="inputMn" placeholder="Монгол бичвэр (жишээ: Автобусны буудал хаана вэ?)">
       
       <select id="inputCategory">
-        <option value="taxi">Taxi & Navigation</option>
-        <option value="shopping">Shopping & Pay</option>
-        <option value="restaurant">Food & Drink</option>
-        <option value="basic">Daily Basics</option>
+        <option value="Daily Basics">Daily Basics</option>
+        <option value="Taxi & Navigation">Taxi & Navigation</option>
+        <option value="Food & Restaurant">Food & Restaurant</option>
+        <option value="Shopping">Shopping</option>
+        <option value="Emergency">Emergency</option>
       </select>
 
-      <!-- Дуу бичих хэсэг -->
-      <div class="recorder-section">
-        <button type="button" id="recordBtn" class="record-btn">🎙️ Start Recording</button>
-        <span id="recordStatus" class="record-status">Not recorded</span>
-        <audio id="audioPreview" controls class="hidden" style="width: 100%; margin-top: 8px;"></audio>
+      <div class="record-box">
+        <button id="recordBtn" type="button" class="btn-record">🎙️ Start Recording</button>
+        <div id="recordStatus">Not recorded</div>
+        <audio id="audioPreview" controls class="hidden"></audio>
       </div>
 
       <div class="modal-actions">
-        <button type="button" id="cancelBtn" class="secondary-btn">Cancel</button>
-        <button type="button" id="submitBtn" class="primary-btn" disabled>Publish</button>
+        <button id="cancelBtn" type="button" class="btn-cancel">Cancel</button>
+        <button id="submitBtn" type="button" class="btn-primary" disabled>Publish</button>
       </div>
     </div>
-  </section>
-
-  <!-- Хайлтын хэсэг -->
-  <div class="search-box">
-    <input type="text" id="searchInput" placeholder="Search phrases...">
   </div>
 
-  <!-- Үгсийн жагсаалт -->
-  <main class="phrase-list" id="phraseList">
-    <p style="text-align: center; color: #94a3b8;">Loading community phrases...</p>
-  </main>
+  <!-- Хүсэлт үлдээх цонх (Modal) -->
+  <div id="requestModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Ask Locals (Request a Phrase)</h3>
+      <p style="color:#94a3b8; font-size:0.9rem; margin-bottom: 12px;">What phrase do you need translated into Mongolian?</p>
+      
+      <input type="text" id="reqEnInput" placeholder="e.g. Please turn on the AC">
 
+      <div class="modal-actions">
+        <button id="cancelReqBtn" type="button" class="btn-cancel">Cancel</button>
+        <button id="submitReqBtn" type="button" class="btn-primary">Submit Request</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase CDN (Хувилбар 9 compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <!-- Үндсэн логик -->
   <script src="app.js"></script>
+
+  <!-- PWA Service Worker бүртгэх -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
 </body>
 </html>

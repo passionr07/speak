@@ -1,4 +1,4 @@
-// 1. Firebase тохиргоо (apiKey-ээ өөрийнхөөрөө солино)
+// 1. Firebase тохиргоо (apiKey болон холбогдох утгуудыг шалгаж оруулна)
 const firebaseConfig = {
   apiKey: "AIzaSyAp75u7Gx2hCsiVODWawOj-FVrNTdd_r44",
   authDomain: "passionr-1feee.firebaseapp.com",
@@ -12,13 +12,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// 2. Хувьсагчууд
+// 2. Хувьсагчууд ба DOM элементүүд
 let mediaRecorder;
 let audioChunks = [];
 let audioBlob = null;
+let selectedMime = 'audio/webm';
 let currentAudio = null;
 let phrases = [];
+let answeringRequestId = null; // Жуулчны хүсэлтэд хариулж байгаа үеийн ID
 
+// Модал болон Үндсэн товчлуурууд
 const modal = document.getElementById('addPhraseModal');
 const toggleFormBtn = document.getElementById('toggleFormBtn');
 const cancelBtn = document.getElementById('cancelBtn');
@@ -29,8 +32,41 @@ const submitBtn = document.getElementById('submitBtn');
 const phraseList = document.getElementById('phraseList');
 const searchInput = document.getElementById('searchInput');
 
-// Модал цонх удирдах
-toggleFormBtn.onclick = () => modal.classList.remove('hidden');
+// Табууд болон Хүсэлтийн элементүүд
+const tabPhrasesBtn = document.getElementById('tabPhrasesBtn');
+const tabRequestsBtn = document.getElementById('tabRequestsBtn');
+const phrasesSection = document.getElementById('phrasesSection');
+const requestsSection = document.getElementById('requestsSection');
+const requestCount = document.getElementById('requestCount');
+const requestList = document.getElementById('requestList');
+
+const requestModal = document.getElementById('requestModal');
+const toggleRequestBtn = document.getElementById('toggleRequestBtn');
+const cancelReqBtn = document.getElementById('cancelReqBtn');
+const submitReqBtn = document.getElementById('submitReqBtn');
+const reqEnInput = document.getElementById('reqEnInput');
+
+// 3. Таб солих удирдлага
+tabPhrasesBtn.onclick = () => {
+  tabPhrasesBtn.classList.add('active');
+  tabRequestsBtn.classList.remove('active');
+  phrasesSection.classList.remove('hidden');
+  requestsSection.classList.add('hidden');
+};
+
+tabRequestsBtn.onclick = () => {
+  tabRequestsBtn.classList.add('active');
+  tabPhrasesBtn.classList.remove('active');
+  requestsSection.classList.remove('hidden');
+  phrasesSection.classList.add('hidden');
+};
+
+// 4. Үг нэмэх модал цонх удирдах
+toggleFormBtn.onclick = () => {
+  answeringRequestId = null;
+  modal.classList.remove('hidden');
+};
+
 cancelBtn.onclick = () => resetModal();
 
 function resetModal() {
@@ -46,9 +82,10 @@ function resetModal() {
   recordBtn.classList.remove('recording');
   submitBtn.disabled = true;
   submitBtn.innerText = 'Publish';
+  answeringRequestId = null;
 }
 
-// 3. Микрофоноор дуу бичих (iPhone болон Android дэмжинэ)
+// 5. Микрофоноор дуу бичих (iOS Safari болон Android-д зориулсан)
 recordBtn.onclick = async () => {
   if (mediaRecorder && mediaRecorder.state === "recording") {
     mediaRecorder.stop();
@@ -59,10 +96,7 @@ recordBtn.onclick = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Төхөөрөмжийн дэмжих форматыг автоматаар сонгох (iOS = mp4, Android = webm)
       let options = {};
-      let selectedMime = 'audio/webm';
-
       if (MediaRecorder.isTypeSupported('audio/mp4')) {
         selectedMime = 'audio/mp4';
         options = { mimeType: 'audio/mp4' };
@@ -84,9 +118,8 @@ recordBtn.onclick = async () => {
       mediaRecorder.onstop = () => {
         const mimeType = mediaRecorder.mimeType || selectedMime;
         audioBlob = new Blob(audioChunks, { type: mimeType });
-        
         audioPreview.src = URL.createObjectURL(audioBlob);
-        audioPreview.load(); // iPhone-д зориулж дууг ачаалах
+        audioPreview.load();
         audioPreview.classList.remove('hidden');
         submitBtn.disabled = false;
       };
@@ -101,7 +134,7 @@ recordBtn.onclick = async () => {
   }
 };
 
-// 4. Дууг Base64 текст болгож Firestore-д шууд хадгалах
+// 6. Аудиог Base64 болгож хадгалах & Хүсэлтийг хаах
 submitBtn.onclick = async () => {
   const en = document.getElementById('inputEn').value.trim();
   const mn = document.getElementById('inputMn').value.trim();
@@ -121,6 +154,7 @@ submitBtn.onclick = async () => {
     const base64Audio = reader.result;
 
     try {
+      // Үндсэн сан руу хадгалах
       await db.collection('phrases').add({
         en: en,
         mn: mn,
@@ -128,6 +162,12 @@ submitBtn.onclick = async () => {
         audioData: base64Audio,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+
+      // Хүсэлтэд хариулсан бол тухайн хүсэлтийг жагсаалтаас хасах
+      if (answeringRequestId) {
+        await db.collection('requests').doc(answeringRequestId).delete();
+        answeringRequestId = null;
+      }
 
       resetModal();
     } catch (err) {
@@ -138,7 +178,7 @@ submitBtn.onclick = async () => {
   };
 };
 
-// 5. Баазаас үгсийг шууд уншиж дэлгэцэнд зурах
+// 7. Үндсэн үгсийг татаж дэлгэцэнд харуулах
 db.collection('phrases').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
   phrases = [];
   snapshot.forEach((doc) => {
@@ -170,7 +210,7 @@ function renderPhrases(items) {
   });
 }
 
-// Дуу тоглуулах
+// 8. Дуу тоглуулах
 function playVoice(src, card) {
   if (currentAudio) {
     currentAudio.pause();
@@ -182,11 +222,69 @@ function playVoice(src, card) {
   currentAudio.onended = () => card.classList.remove('playing');
 }
 
-// Хайлт хийх
+// 9. Үг хайх
 searchInput.addEventListener('input', (e) => {
   const q = e.target.value.toLowerCase();
   const filtered = phrases.filter(p => 
     p.en.toLowerCase().includes(q) || p.mn.toLowerCase().includes(q)
   );
   renderPhrases(filtered);
+});
+
+// 10. Хүсэлт илгээх модал цонх удирдах
+toggleRequestBtn.onclick = () => requestModal.classList.remove('hidden');
+cancelReqBtn.onclick = () => {
+  requestModal.classList.add('hidden');
+  reqEnInput.value = '';
+};
+
+submitReqBtn.onclick = async () => {
+  const enText = reqEnInput.value.trim();
+  if (!enText) return alert('Хүсэлтээ бичнэ үү!');
+
+  submitReqBtn.disabled = true;
+  try {
+    await db.collection('requests').add({
+      en: enText,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    reqEnInput.value = '';
+    requestModal.classList.add('hidden');
+  } catch (err) {
+    alert('Алдаа: ' + err.message);
+  } finally {
+    submitReqBtn.disabled = false;
+  }
+};
+
+// 11. Хүсэлтүүдийг шууд хянах (Realtime Listener)
+db.collection('requests').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+  requestList.innerHTML = '';
+  requestCount.innerText = snapshot.size;
+
+  if (snapshot.empty) {
+    requestList.innerHTML = `<p style="text-align:center; color:#64748b; padding:20px;">Одоогоор хүсэлт алга байна.</p>`;
+    return;
+  }
+
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+    const reqCard = document.createElement('div');
+    reqCard.className = 'request-card';
+    reqCard.innerHTML = `
+      <div>
+        <div style="font-weight:bold; font-size:1.05rem; color:#f8fafc;">${data.en}</div>
+        <span style="font-size:0.8rem; color:#64748b;">Орчуулга & Дуу хүлээгдэж байна</span>
+      </div>
+      <button class="btn-answer">🎙️ Хариулах</button>
+    `;
+
+    reqCard.querySelector('.btn-answer').onclick = () => {
+      answeringRequestId = doc.id;
+      document.getElementById('inputEn').value = data.en;
+      modal.classList.remove('hidden');
+    };
+
+    requestList.appendChild(reqCard);
+  });
 });
