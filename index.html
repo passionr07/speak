@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Speak Mongolia</title>
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Firebase SDK (v9 compat хувилбар нь хялбар) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+
+  <header>
+    <h1>🇲🇳 Open Speak Mongolia</h1>
+    <p class="subtitle">Community-driven phrasebook</p>
+    
+    <!-- Шинэ үг, дуу нэмэх товчлуур -->
+    <button id="toggleFormBtn" class="primary-btn" style="margin-top: 12px;">+ Add New Phrase</button>
+  </header>
+
+  <!-- Үг ба Дуу бичиж оруулах модал форм -->
+  <section id="addPhraseModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Record & Add Phrase</h3>
+      
+      <input type="text" id="inputEn" placeholder="English (e.g. Where is the bus stop?)" required>
+      <input type="text" id="inputMn" placeholder="Монгол (жишээ: Автобусны буудал хаана вэ?)" required>
+      
+      <select id="inputCategory">
+        <option value="taxi">Taxi & Navigation</option>
+        <option value="shopping">Shopping & Pay</option>
+        <option value="restaurant">Food & Drink</option>
+        <option value="basic">Daily Basics</option>
+      </select>
+
+      <!-- Дуу бичих хэсэг -->
+      <div class="recorder-section">
+        <button type="button" id="recordBtn" class="record-btn">🎙️ Start Recording</button>
+        <span id="recordStatus" class="record-status">Not recorded</span>
+        <audio id="audioPreview" controls class="hidden" style="width: 100%; margin-top: 8px;"></audio>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="cancelBtn" class="secondary-btn">Cancel</button>
+        <button type="button" id="submitBtn" class="primary-btn" disabled>Publish</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Хайлтын хэсэг -->
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search phrases...">
+  </div>
+
+  <!-- Үгсийн жагсаалт -->
+  <main class="phrase-list" id="phraseList">
+    <p style="text-align: center; color: #94a3b8;">Loading community phrases...</p>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
