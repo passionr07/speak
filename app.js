@@ -48,7 +48,7 @@ function resetModal() {
   submitBtn.innerText = 'Publish';
 }
 
-// 3. Микрофоноор дуу бичих
+// 3. Микрофоноор дуу бичих (iPhone болон Android дэмжинэ)
 recordBtn.onclick = async () => {
   if (mediaRecorder && mediaRecorder.state === "recording") {
     mediaRecorder.stop();
@@ -58,7 +58,23 @@ recordBtn.onclick = async () => {
   } else {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
+      
+      // Төхөөрөмжийн дэмжих форматыг автоматаар сонгох (iOS = mp4, Android = webm)
+      let options = {};
+      let selectedMime = 'audio/webm';
+
+      if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        selectedMime = 'audio/mp4';
+        options = { mimeType: 'audio/mp4' };
+      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        selectedMime = 'audio/webm;codecs=opus';
+        options = { mimeType: 'audio/webm;codecs=opus' };
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        selectedMime = 'audio/webm';
+        options = { mimeType: 'audio/webm' };
+      }
+
+      mediaRecorder = new MediaRecorder(stream, options);
       audioChunks = [];
 
       mediaRecorder.ondataavailable = (e) => {
@@ -66,8 +82,11 @@ recordBtn.onclick = async () => {
       };
 
       mediaRecorder.onstop = () => {
-        audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const mimeType = mediaRecorder.mimeType || selectedMime;
+        audioBlob = new Blob(audioChunks, { type: mimeType });
+        
         audioPreview.src = URL.createObjectURL(audioBlob);
+        audioPreview.load(); // iPhone-д зориулж дууг ачаалах
         audioPreview.classList.remove('hidden');
         submitBtn.disabled = false;
       };
