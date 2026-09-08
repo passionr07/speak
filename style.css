@@ -239,3 +239,14 @@ p.subtitle {
   justify-content: flex-end;
   gap: 10px;
 }
+/* Утсан дээр бичих талбар дээр дарахад дэлгэц томрохоос сэргийлэх */
+input, select, textarea {
+  font-size: 16px !important;
+}
+
+/* Модал цонхыг гар гарч ирэхэд дэлгэцийн гадна гарахаас хамгаалах */
+.modal-content {
+  max-height: 85vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
